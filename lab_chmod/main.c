@@ -1,53 +1,135 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 #include <sys/stat.h>
 
-int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        printf("Usage: %s <mode> <file>\n", argv[0]);
-        return 1;
-    }
-
-    char *mode = argv[1];
-    char *file = argv[2];
-
-    struct stat st;
-    if (stat(file, &st) != 0) {
-        perror("stat");
-        return 1;
-    }
-
-    mode_t new_mode = st.st_mode;
-
-    if (mode[0] >= '0' && mode[0] <= '7') {
-        new_mode = strtol(mode, NULL, 8);
-    } else {
-        for (char *p = mode; *p; p++) {
-            switch (*p) {
-                case '+':
-                    p++;
-                    switch (*p) {
-                        case 'r': new_mode |= S_IRUSR | S_IRGRP | S_IROTH; break;
-                        case 'w': new_mode |= S_IWUSR | S_IWGRP | S_IWOTH; break;
-                        case 'x': new_mode |= S_IXUSR | S_IXGRP | S_IXOTH; break;
-                    }
-                    break;
-                case '-':
-                    p++;
-                    switch (*p) {
-                        case 'r': new_mode &= ~(S_IRUSR | S_IRGRP | S_IROTH); break;
-                        case 'w': new_mode &= ~(S_IWUSR | S_IWGRP | S_IWOTH); break;
-                        case 'x': new_mode &= ~(S_IXUSR | S_IXGRP | S_IXOTH); break;
-                    }
-                    break;
+void changeFileMode(char* filePath, char* command)
+{
+    if (command[0] >= '0' && command[0] <= '7')
+    {
+        for (unsigned long i = 0; i < strlen(command); ++i)
+        {
+            if (command[0] < '0' && command[0] > '7')
+            {
+                exit(1);
             }
         }
+
+        mode_t mode = strtol(command, NULL, 8);
+
+        if (chmod(filePath, mode) < 0)
+        {
+            exit(1);
+        }
+    }
+    else
+    {
+        bool user = false;
+        bool group = false;
+        bool other = false;
+
+        bool read = false;
+        bool write = false;
+        bool execute = false;
+
+        bool add = false;
+        bool remove = false;
+
+        struct stat stats;
+
+        if (command[0] == '+' || command[0] == '-')
+        {
+            user = true;
+            group = true;
+            other = true;
+        }
+
+        for (unsigned long i = 0; i < strlen(command); ++i)
+        {
+            if (command[i] == 'u') user = true;
+            else if (command[i] == 'g') group = true;
+            else if (command[i] == 'o') other = true;
+            else if (command[i] == 'r') read = true;
+            else if (command[i] == 'w') write = true;
+            else if (command[i] == 'x') execute = true;
+            else if (command[i] == '+') add = true;
+            else if (command[i] == '-') remove = true;
+            else exit(1);
+        }
+        
+        if (stat(filePath, &stats) < 0) 
+        {
+            exit(1);
+        }
+
+        mode_t mode = stats.st_mode;
+
+        if (add) 
+        {
+            if (user) 
+            {
+                if (read) mode |= S_IRUSR;
+                if (write) mode |= S_IWUSR;
+                if (execute) mode |= S_IXUSR;
+            }
+            if (group) 
+            {
+                if (read) mode |= S_IRGRP;
+                if (write) mode |= S_IWGRP;
+                if (execute) mode |= S_IXGRP;
+            }
+            if (other) 
+            {
+                if (read) mode |= S_IROTH;
+                if (write) mode |= S_IWOTH;
+                if (execute) mode |= S_IXOTH;
+            }
+        }
+        else 
+        {
+            if (user) 
+            {
+                if (read) mode -= mode & S_IRUSR;
+                if (write) mode -= mode & S_IWUSR;
+                if (execute) mode -= mode & S_IXUSR;
+            }
+            if (group) 
+            {
+                if (read) mode -= mode & S_IRGRP;
+                if (write) mode -= mode & S_IWGRP;
+                if (execute) mode -= mode & S_IXGRP;
+            }
+            if (other) 
+            {
+                if (read) mode -= mode & S_IROTH;
+                if (write) mode -= mode & S_IWOTH;
+                if (execute) mode -= mode & S_IXOTH;
+            }
+        }
+
+
+        if (chmod(filePath, mode) < 0) 
+        {
+            exit(1);
+        }
+    }
+}
+
+int main(int argc, char** argv)
+{   
+    char* command;
+    char* filePath;
+
+    if (argc != 3)
+    {
+        exit(1);
     }
 
-    if (chmod(file, new_mode) != 0) {
-        perror("chmod");
-        return 1;
-    }
+    command = argv[1];
+    filePath = argv[2];
+
+    changeFileMode(filePath, command);
 
     return 0;
 }

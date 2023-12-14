@@ -261,9 +261,9 @@ void extractFile(char* archName, char* fileName)
         {
             srand(time(NULL));
             char randomSufix[5];
-            sprintf(randomSufix, "%d", 1000+(rand()%9000));
+            sprintf(randomSufix, "%d", 100+(rand()%9000));
 
-            memcpy(filePath + strlen(fileName), "_", 1);
+            memcpy(filePath + strlen(fileName), "|", 1);
             memcpy(filePath + strlen(fileName) + 1, randomSufix, strlen(randomSufix) + 1);
         }
 
