@@ -87,6 +87,7 @@ int main()
 
     while(1)
     {
+        sleep(1);
         struct tm* curTime = getTime();
         char pid[16];
 
