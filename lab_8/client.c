@@ -11,11 +11,13 @@
 #include <pthread.h>
 
 #define bufSize 128
-#define semName "/sem3"
+#define semName "sem"
+#define memName "sh_mem2"
 
 int shmid;
 char* segptr;
 sem_t* sem;
+char cwd[1000];
 
 struct tm* getTime()
 {
@@ -49,8 +51,12 @@ int main()
 {
     signal(SIGINT, signalfunction);
 
+    getcwd(cwd, sizeof(cwd));
+    strcat(cwd, "/");
+    strcat(cwd, memName);
+
     char buffer[bufSize];
-    key_t key = ftok(".", 'S');
+    key_t key = ftok(cwd, 1);
 
     if ((sem = sem_open(semName, 0)) == SEM_FAILED)
     {
@@ -85,6 +91,6 @@ int main()
         printf("Time in child process: %s\n", asctime(curTime));
     }
 
-
+ 
     return(0);
 }

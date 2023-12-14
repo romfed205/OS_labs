@@ -11,9 +11,12 @@
 #include <pthread.h>
 
 #define bufSize 128
+#define memName "sh_mem2"
 
-int shmid, cntr;
+int shmid;
 char* segptr;
+sem_t* sem;
+char cwd[1000];
 
 struct tm* getTime()
 {
@@ -41,10 +44,12 @@ int main()
 {
     signal(SIGINT, signalfunction);
 
-    char buffer[bufSize];
-    key_t key;
+    getcwd(cwd, sizeof(cwd));
+    strcat(cwd, "/");
+    strcat(cwd, memName);
 
-    key = ftok(".", 'S');
+    char buffer[bufSize];
+    key_t key = ftok(cwd, 1);
 
     if ((shmid = shmget(key, bufSize, 0)) == -1)
     {

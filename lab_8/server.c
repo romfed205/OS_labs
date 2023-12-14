@@ -14,11 +14,13 @@
 #include <fcntl.h>
 
 #define bufSize 128
-#define semName "/sem3"
+#define semName "sem"
+#define memName "sh_mem2"
 
 int shmid;
 char* segptr;
 sem_t* sem;
+char cwd[1000];
 
 struct tm* getTime()
 {
@@ -57,6 +59,12 @@ void signalfunction(int sig)
         exit(1);
     }
 
+    if (unlink(cwd) == -1)
+    {
+        perror("unlink");
+        exit(1);
+    }
+
     exit(0);
 }
 
@@ -64,12 +72,25 @@ int main()
 {
     signal(SIGINT, signalfunction);
 
+    getcwd(cwd, sizeof(cwd));
+    strcat(cwd, "/");
+    strcat(cwd, memName);
+
     char buffer[bufSize];
-    key_t key = ftok(".", 'S');
-    
-    if ((sem = sem_open(semName, O_CREAT | O_EXCL, 0666, 1)) == SEM_FAILED)
+    int file = open(cwd, O_CREAT | 0666);
+
+    if (file == -1)
     {
-        perror("sem_open");
+        perror("open");
+        exit(1);
+    }
+
+    close(file);
+    key_t key = ftok(cwd, 1);
+
+    if (key == -1)
+    {
+        perror("ftok");
         exit(1);
     }
 
@@ -81,13 +102,21 @@ int main()
 
     if ((segptr = shmat(shmid, 0, 0)) == (void*) -1)
     {
+        sem_close(sem);
         perror("shmat");
+        exit(1);
+    }
+
+    if ((sem = sem_open(semName, O_CREAT | O_EXCL, 0666, 1)) == SEM_FAILED)
+    {
+        perror("sem_open");
         exit(1);
     }
 
     while(1)
     {
         sleep(3);
+
         struct tm* curTime = getTime();
         char pid[16];
 

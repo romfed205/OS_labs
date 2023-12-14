@@ -7,13 +7,19 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <semaphore.h>
+#include <fcntl.h>
 
 #define bufSize 128
+#define memName "sh_mem2"
 
-int shmid, cntr;
+int shmid;
 char* segptr;
+sem_t* sem;
+char cwd[1000];
 
 struct tm* getTime()
 {
@@ -40,6 +46,12 @@ void signalfunction(int sig)
         exit(1);
     }
 
+    if (unlink(cwd) == -1)
+    {
+        perror("unlink");
+        exit(1);
+    }
+
     exit(0);
 }
 
@@ -47,10 +59,27 @@ int main()
 {
     signal(SIGINT, signalfunction);
 
-    char buffer[bufSize];
-    key_t key;
+    getcwd(cwd, sizeof(cwd));
+    strcat(cwd, "/");
+    strcat(cwd, memName);
 
-    key = ftok(".", 'S');
+    char buffer[bufSize];
+    int file = open(cwd, O_CREAT | 0666);
+
+    if (file == -1)
+    {
+        perror("open");
+        exit(1);
+    }
+
+    close(file);
+    key_t key = ftok(cwd, 1);
+
+    if (key == -1)
+    {
+        perror("ftok");
+        exit(1);
+    }
 
     if ((shmid = shmget(key, bufSize, IPC_CREAT | IPC_EXCL | 0666)) == -1)
     {
@@ -67,6 +96,7 @@ int main()
     while(1)
     {
         sleep(3);
+
         struct tm* curTime = getTime();
         char pid[16];
 
