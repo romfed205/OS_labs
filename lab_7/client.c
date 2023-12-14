@@ -60,7 +60,7 @@ int main()
 
     while(1)
     {
-        sleep(1);
+        sleep(4);
 
         struct tm* parentTime;
         struct tm* curTime = getTime();
