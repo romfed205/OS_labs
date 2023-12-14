@@ -85,8 +85,6 @@ int main()
         printf("Time in child process: %s\n", asctime(curTime));
     }
 
-    shmdt(segptr);
-    shmctl(shmid, IPC_RMID, NULL);
 
     return(0);
 }
