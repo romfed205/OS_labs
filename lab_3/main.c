@@ -1,46 +1,59 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
 #include <signal.h>
+#include <string.h>
 
-void atexit_handler(void) {
-    printf("Обработчик atexit() вызван\n");
+
+void _print(){
+    printf("Program exited.\n");
 }
 
-void sigint_handler(int signum) {
-    printf("Получен сигнал SIGINT (%d)\n", signum);
+void _sigint(int sig){
+    printf("Received SIGINT signal (%d)\n", sig);
+	exit(0);
 }
 
-void sigterm_handler(int signum, siginfo_t *info, void *ptr) {
-    printf("Получен сигнал SIGTERM (%d)\n", signum);
+void _sigterm(int sig, siginfo_t *info, void *context){
+    printf("Received SIGTERM signal. Signal number: %d\n", sig);
+	printf("Signal description: %s\n", strsignal(sig));
+	printf("Sender Process ID: %d\n", info->si_pid);
+
+    exit(0);
 }
 
-int main() {
+int main(int argc, char* argv[])
+{
     pid_t pid = fork();
 
-    if (pid == -1) {
-        printf("Ошибка при вызове fork()\n");
-        return 1;
-    }
+	int status;
+	atexit(_print);
+	signal(SIGINT, _sigint);
+	struct sigaction sigterm_action;
+    sigterm_action.sa_sigaction = _sigterm;
+    sigemptyset(&sigterm_action.sa_mask);
+    sigterm_action.sa_flags = SA_SIGINFO;
+    sigaction(SIGTERM, &sigterm_action, NULL);
+        if(pid < 0){
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
 
-    if (pid == 0) {
-        printf("Это процесс-потомок\n");
-    } else {
-        printf("Это процесс-родитель\n");
-    }
+        else if(pid == 0){
+        	printf("Child process. Process ID: %d\n", getpid());
+        	sleep(5);
+        	printf("Child process completed.\n");
+        	exit(0); 
+        }
 
-    atexit(atexit_handler);
-
-    signal(SIGINT, sigint_handler);
-
-    struct sigaction act;
-    act.sa_sigaction = sigterm_handler;
-    act.sa_flags = SA_SIGINFO;
-    sigaction(SIGTERM, &act, NULL);
-
-    while (1) {
-        sleep(1);
-    }
-
+        else{
+        	printf("Parent process. Process ID: %d, Child ID: %d\n", getpid(), pid);
+            waitpid(pid, &status, WNOHANG);
+        	printf("Child process finished. Status: %d\n", status);
+        }
+        
     return 0;
 }

@@ -1,7 +1,5 @@
-all: comp 
-comp:
-	gcc main.c -o frk
-show:
-
+.PHONY: all clean
+all: fork.c
+	gcc fork.c -o frk
 clean:
-	rm frk 
+	rm -r frk
