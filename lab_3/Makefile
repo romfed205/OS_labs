@@ -1,5 +1,5 @@
 .PHONY: all clean
-all: fork.c
+all: main.c
 	gcc main.c -o frk
 clean:
 	rm -r frk
